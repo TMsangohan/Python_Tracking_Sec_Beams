@@ -287,9 +287,10 @@ def MADX_Beam(beam,seq='LHCB1',bv=1,energy=522340,charge=ioncharge,mass=ionmass,
 # MADX - running twiss
 #
 # usage:
-#  Twiss(seq,fn,targetxc=0.0,targetel='',correctorlist='',errorseq='',twisscols=MADtwissColumns["LHCTwiss"]
+#  Twiss(seq,fn,fileloading,targetxc=0.0,targetel='',correctorlist='',errorseq='',twisscols=MADtwissColumns["LHCTwiss"]
 #                        ,beam=[MADX_Beam(1,seq='LHCB1',ey=1.5e-6),MADX_Beam(2,seq='LHCB2',ey=1.5e-6)])
 # seq = sequence string 
+# fileloading = multiline string for calling seq files and setting optics directory cusin links
 # targetxc = desired displacement at target element
 # targetel = element where the orbit displacement should match a certain value
 # correctorlist = list of correctors to use for the construction of the bump
@@ -359,6 +360,8 @@ SELECT,FLAG=TWISS,CLEAR;
         
 SELECT,FLAG=TWISS,RANGE=#S/#E,COLUMN={twcol};
 TWISS,SEQUENCE={seq},file={fn};
+
+system, "rm db5";
 
 '''.format(**dformat)
     fn = open('madin.madx','wt')
