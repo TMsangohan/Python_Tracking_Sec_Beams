@@ -297,7 +297,13 @@ def MADX_Beam(beam,seq='LHCB1',bv=1,energy=522340,charge=ioncharge,mass=ionmass,
 # twisscols = columns to write to the twiss output tfs file
 # beam = list of two beam commands to use in the twiss
 # ----------------------------------------------------------------
-def Twiss(seq,fn,optstart='#S',optstop='#E',IPcycle='IP5',targetxc=0.0,targetel=' ',correctorlist=[],          errorseq='',twisscols=MADtwissColumns["LHCTwiss"],beam=[MADX_Beam(1,seq='LHCB1',ey=1.5e-6),
+def Twiss(seq,fn,fileloading='''
+system,"ln -fns  /afs/cern.ch/eng/lhc/optics/runII/2015/ db5";
+call, file="db5/lhcb4_as-built.seq";
+call, file="db5/opt_inj_colltunes.madx";
+call, file="db5/opt_800_800_800_3000_ion_coll.madx";'''
+          , optstart='#S',optstop='#E',IPcycle='IP5',targetxc=0.0,targetel=' ',correctorlist=[],\
+          errorseq='',twisscols=MADtwissColumns["LHCTwiss"],beam=[MADX_Beam(1,seq='LHCB1',ey=1.5e-6),
                                                                   MADX_Beam(2,seq='LHCB2',ey=1.5e-6)]):
     tw     = ''
     cycle  = '''
@@ -319,7 +325,8 @@ ENDEDIT;
         'seq'       : seq,
         'fn'        : fn,
         'twcol'     : tw[:-1],
-        'errors'    : errorseq 
+        'errors'    : errorseq,
+        'fileload'  : fileloading
     }
         
     if (targetel==' '):
@@ -328,10 +335,7 @@ ENDEDIT;
         dformat['bumpmatch'] =madMatchBump(seq,targetxc,targetel,correctorlist)
         
     madin ='''
-system,"ln -fns  /afs/cern.ch/eng/lhc/optics/runII/2015/ db5";
-call, file="db5/lhcb4_as-built.seq";
-call, file="db5/opt_inj_colltunes.madx";
-call, file="db5/opt_800_800_800_3000_ion_coll.madx";
+{fileload}
 
 on_alice := 7000/6370.;
 on_lcb   := 7000/6370.;
