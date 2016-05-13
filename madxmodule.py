@@ -55,7 +55,7 @@ MADtwissColumns["LHCTwiss"] = ["NAME", "KEYWORD", "PARENT", "S", "L",
    "LRAD", "KICK", "HKICK", "VKICK", "ANGLE", "K0L", "K1L", "K2L", 
    "K3L", "X", "Y", "PX", "PY", "BETX", "BETY", "ALFX", "ALFY", "MUX",
     "MUY", "DX", "DY", "DPX", "DPY", "KMAX", "KMIN", "CALIB", 
-   "POLARITY", "APERTYPE", "N1", "TILT"]
+   "POLARITY", "APERTYPE",'APER_1','APER_2','APER_3','APER_4',"N1", "TILT"]
 
 MADtwissColumns["CTE"] = ["NAME","S","L","BETX","BETY","ALFX","ALFY","DX","DPX","DY","DPY","ANGL","K1L","K1S"]
 
@@ -193,10 +193,10 @@ def Mdrift6D(s):
 # fn = tfs file
 # deltap = deltap to set for secondary beams
 # ----------------------------------------------------------------
-def get_initial(fn,deltap):
+def get_initial(fn,deltap,location='IP5'):
     dat = pd.read_csv(fn,delim_whitespace=True,header=None,names=MADtwissColumns["LHCTwiss"],skiprows=range(47),                      index_col=False)
     dcout = {}
-    info = dat[dat.NAME == 'IP5']
+    info = dat[dat.NAME == location]
     dcout['BETX'] = info.BETX.values[0]
     dcout['BETY'] = info.BETY.values[0]
     dcout['ALFX'] = info.ALFX.values[0]
@@ -337,9 +337,6 @@ ENDEDIT;
         
     madin ='''
 {fileload}
-
-on_alice := 7000/6370.;
-on_lcb   := 7000/6370.;
         
 {beam1}
 {beam2}
@@ -386,8 +383,15 @@ system, "rm db5";
 # twisscols = columns to write to the twiss output tfs file
 # beam = list of two beam commands to use in the twiss
 # ----------------------------------------------------------------
-def TransferMatrix(lhcseq,optstart,optstop,initdict,targetxc,targetel,correctorlist,IPcycle='IP5',                   errorseq='',fileext='',beam=[MADX_Beam(1,seq='LHCB1',ey=1.5e-6),
-                                                                  MADX_Beam(2,seq='LHCB2',ey=1.5e-6)]):
+def TransferMatrix(lhcseq,optstart,optstop,initdict,targetxc,targetel,correctorlist,
+                   fileloading='''
+system,"ln -fns  /afs/cern.ch/eng/lhc/optics/runII/2015/ db5";
+call, file="db5/lhcb4_as-built.seq";
+call, file="db5/opt_inj_colltunes.madx";
+call, file="db5/opt_800_800_800_3000_ion_coll.madx";''',
+                   IPcycle='IP5',\
+                   errorseq='',fileext='',beam=[MADX_Beam(1,seq='LHCB1',ey=3.5e-6),
+                                                                  MADX_Beam(2,seq='LHCB2',ey=3.5e-6)]):
     fnstem = "BFPPbeamTransferMatrix" + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     moufn  = fnstem + '\BFPPbeamTransferMatrix.mou'
     tw     = ''
@@ -420,17 +424,12 @@ ENDEDIT;
         'bumpmatch'    : madMatchBump(lhcseq,targetxc,targetel,correctorlist),
         'fnknob'       : 'knob'
              + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + '.str',
-        'errors'      : errorseq        
+        'errors'       : errorseq,
+        'fileload'     : fileloading        
         }
     madin = '''
-system,"ln -fns  /afs/cern.ch/eng/lhc/optics/runII/2015/ db5";
-call, file="db5/lhcb4_as-built.seq";
-call, file="db5/opt_inj_colltunes.madx";
-call, file="db5/opt_800_800_800_3000_ion_coll.madx";
-
-on_alice := 7000/6370.;
-on_lcb   := 7000/6370.;
-        
+{fileload}
+       
 {beam1}
 {beam2}
 {cycle}
@@ -450,6 +449,9 @@ SELECT,FLAG=TWISS,CLEAR;
         
 SELECT,FLAG=TWISS,RANGE={start}/{stop},COLUMN={twcol};
 TWISS,SEQUENCE={seq},file={transfertfsfn}{initdc}, RMATRIX=TRUE;
+
+system, "rm db5";
+
     '''.format(**d)
     fn = open('madin.madx','wt')
     fn.write(madin)
